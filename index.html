@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive 15-question quiz based on The Animal Battle Arena: Who Wins? presentation.">
+<title>The Animal Battle Arena — Interactive Quiz</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23090E18'/%3E%3Cpath d='M13 6h6l-5 20h-6z' fill='%23FF6B2C'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#060A12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#060A12;
+    --panel:rgba(255,255,255,.045);
+    --panel-hi:rgba(255,255,255,.075);
+    --line:rgba(255,255,255,.10);
+    --line-hi:rgba(255,255,255,.18);
+    --orange:#FF6B2C;
+    --orange-soft:rgba(255,107,44,.14);
+    --teal:#2BD9E8;
+    --green:#3DDC97;
+    --red:#FF5A5F;
+    --text:#EAF1FB;
+    --muted:#93A5BE;
+    --radius:20px;
+    --shadow:0 30px 70px rgba(0,0,0,.5);
+    --display:"Barlow Condensed","Arial Narrow",Impact,system-ui,sans-serif;
+    --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--body);
+    color:var(--text);
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(1100px 620px at 12% -12%, rgba(255,107,44,.20), transparent 62%),
+      radial-gradient(900px 520px at 92% -6%, rgba(43,217,232,.16), transparent 60%),
+      radial-gradient(900px 700px at 50% 118%, rgba(255,107,44,.10), transparent 62%);
+    background-attachment:fixed;
+    min-height:100%;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse 85% 70% at 50% 35%,#000 25%,transparent 78%);
+    -webkit-mask-image:radial-gradient(ellipse 85% 70% at 50% 35%,#000 25%,transparent 78%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 70% 55% at 50% 50%,transparent 40%,rgba(3,6,12,.75) 100%);
+  }
+
+  .app{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:26px 22px 54px;min-height:100vh;display:flex;flex-direction:column}
+
+  /* ---------- Top bar ---------- */
+  .topbar{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:30px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand-mark{width:7px;height:26px;background:var(--orange);transform:skewX(-14deg);border-radius:2px;box-shadow:0 0 18px rgba(255,107,44,.65);flex:none}
+  .brand-text{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+  .brand-text b{font-family:var(--display);font-weight:800;letter-spacing:.10em;font-size:15px;text-transform:uppercase;white-space:nowrap}
+  .brand-text span{font-size:10px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;margin-top:3px}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+  .pill b{color:var(--text);font-weight:700}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+  .pill.timer .dot{background:var(--orange);box-shadow:0 0 10px var(--orange)}
+  .pill.timer.low{border-color:rgba(255,90,95,.55);color:#FFB4B6}
+  .pill.timer.low .dot{background:var(--red);box-shadow:0 0 12px var(--red);animation:blink .9s steps(2,end) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .pill[hidden]{display:none}
+
+  /* ---------- Screens ---------- */
+  .screen{display:none;flex:1}
+  .screen.active{display:flex;flex-direction:column;justify-content:center;animation:rise .5s cubic-bezier(.22,.9,.28,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  /* ---------- Start ---------- */
+  .hero{text-align:center;padding:14px 0 8px}
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--teal);margin-bottom:18px}
+  .eyebrow::before,.eyebrow::after{content:"";width:26px;height:1px;background:linear-gradient(90deg,transparent,var(--teal))}
+  .eyebrow::after{background:linear-gradient(90deg,var(--teal),transparent)}
+  .hero h1{text-wrap:balance;font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:.92;font-size:clamp(38px,7.4vw,72px)}
+  .hero h1 .accent{display:block;color:var(--orange);text-shadow:0 0 46px rgba(255,107,44,.45)}
+  .hero p.lead{color:var(--muted);font-size:15px;max-width:560px;margin:20px auto 0}
+  .hero p.lead b{color:var(--text);font-weight:600}
+
+  .stats{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:26px 0 8px}
+  .stat{min-width:112px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);backdrop-filter:blur(8px)}
+  .stat b{display:block;font-family:var(--display);font-size:26px;line-height:1;color:var(--text);letter-spacing:.02em}
+  .stat span{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+  .arena-tags{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:24px auto 0;max-width:700px}
+  .tag{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:7px 13px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:rgba(255,255,255,.03)}
+  .tag i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:7px;vertical-align:1px}
+
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.022));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+
+  .setup{margin:30px auto 0;max-width:640px;padding:20px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .setup .label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .setup .hint{font-size:12px;color:var(--muted);margin-left:auto}
+  .switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none;font-size:13px;font-weight:600}
+  .switch input{position:absolute;opacity:0;width:0;height:0}
+  .track{width:46px;height:26px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid var(--line);position:relative;transition:.25s}
+  .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#8fa0b8;transition:.25s}
+  .switch input:checked + .track{background:rgba(255,107,44,.35);border-color:rgba(255,107,44,.6)}
+  .switch input:checked + .track::after{left:23px;background:var(--orange);box-shadow:0 0 12px rgba(255,107,44,.9)}
+  .switch input:focus-visible + .track{outline:2px solid var(--teal);outline-offset:3px}
+
+  .cta{display:flex;justify-content:center;margin:30px 0 0}
+  .btn{font-family:var(--body);font-size:14px;font-weight:700;letter-spacing:.06em;border:0;cursor:pointer;border-radius:14px;padding:15px 26px;display:inline-flex;align-items:center;gap:10px;transition:transform .18s,box-shadow .18s,background .18s,color .18s;text-decoration:none}
+  .btn:active{transform:translateY(1px) scale(.99)}
+  .btn-primary{background:linear-gradient(135deg,#FF7A3D,#F04E17);color:#160700;box-shadow:0 14px 34px rgba(255,107,44,.32),inset 0 1px 0 rgba(255,255,255,.35)}
+  .btn-primary:hover{box-shadow:0 18px 42px rgba(255,107,44,.45),inset 0 1px 0 rgba(255,255,255,.4);transform:translateY(-2px)}
+  .btn-ghost{background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--line-hi)}
+  .btn-ghost:hover{background:rgba(255,255,255,.09);transform:translateY(-2px)}
+  .btn:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+
+  .wordbank{margin:26px auto 0;max-width:760px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .bank{padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .bank h3{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:11px;font-weight:700}
+  .bank .words{display:flex;flex-wrap:wrap;gap:6px}
+  .word{font-size:11.5px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);color:#c8d6e8}
+
+  /* ---------- Quiz ---------- */
+  .quiz-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;color:var(--accent,#FF6B2C);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+  .counter{margin-left:auto;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .counter b{color:var(--text);font-family:var(--display);font-size:17px;letter-spacing:.06em}
+
+  .progress{height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:26px}
+  .progress-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#F04E17,#FFA24B 55%,var(--teal));transition:width .5s cubic-bezier(.22,.9,.28,1);box-shadow:0 0 16px rgba(255,107,44,.55)}
+
+  .q-card{padding:28px 28px 24px;position:relative;overflow:hidden}
+  .q-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent,#FF6B2C),transparent);opacity:.75}
+  .q-num{font-family:var(--display);font-size:13px;letter-spacing:.3em;color:rgba(255,255,255,.32);margin-bottom:10px}
+  .q-text{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.015em;font-size:clamp(22px,3.4vw,31px);line-height:1.18;margin-bottom:24px;text-wrap:balance}
+
+  .options{display:grid;gap:10px}
+  .option{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:15px 16px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.032);color:var(--text);font-family:var(--body);font-size:14.5px;font-weight:500;cursor:pointer;transition:border-color .18s,background .18s,transform .18s,opacity .25s}
+  .option:hover:not(:disabled){border-color:rgba(255,107,44,.55);background:rgba(255,107,44,.10);transform:translateX(3px)}
+  .option:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .option:disabled{cursor:default}
+  .letter{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);color:#c3d1e4;transition:.18s}
+  .opt-text{flex:1;min-width:0}
+  .opt-mark{flex:none;width:20px;text-align:center;font-size:15px;font-weight:700;opacity:0;transition:opacity .2s}
+  .option.correct{border-color:rgba(61,220,151,.75);background:rgba(61,220,151,.13);box-shadow:0 0 0 1px rgba(61,220,151,.25) inset}
+  .option.correct .letter{background:var(--green);color:#04150D;border-color:transparent}
+  .option.correct .opt-mark{opacity:1;color:var(--green)}
+  .option.wrong{border-color:rgba(255,90,95,.7);background:rgba(255,90,95,.12)}
+  .option.wrong .letter{background:var(--red);color:#1A0203;border-color:transparent}
+  .option.wrong .opt-mark{opacity:1;color:var(--red)}
+  .option.dim{opacity:.52}
+
+  .feedback{margin-top:16px;border-radius:14px;padding:15px 17px;border:1px solid transparent;display:none;animation:rise .32s ease both}
+  .feedback.show{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .feedback.ok{background:rgba(61,220,151,.09);border-color:rgba(61,220,151,.32)}
+  .feedback.no{background:rgba(255,90,95,.09);border-color:rgba(255,90,95,.32)}
+  .fb-body{flex:1;min-width:200px}
+  .fb-title{font-family:var(--display);font-size:17px;letter-spacing:.10em;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .feedback.ok .fb-title{color:var(--green)}
+  .feedback.no .fb-title{color:#FF8A8E}
+  .fb-text{font-size:13.5px;color:#cbd8e8;line-height:1.6}
+  .fb-text .ans{color:#fff;font-weight:600}
+  .btn-next{flex:none;align-self:center;background:rgba(255,255,255,.09);border:1px solid var(--line-hi);color:var(--text);padding:12px 20px;font-size:13px;border-radius:12px}
+  .btn-next:hover{background:rgba(255,255,255,.15);transform:translateX(2px)}
+
+  .kbd-hint{display:flex;gap:16px;justify-content:center;margin-top:22px;font-size:11px;color:rgba(255,255,255,.30);letter-spacing:.05em;flex-wrap:wrap}
+  kbd{font-family:var(--body);font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#a9b9cd;margin-right:4px}
+
+  /* ---------- Results ---------- */
+  .result-top{display:flex;gap:30px;align-items:center;padding:30px;flex-wrap:wrap}
+  .ring-wrap{position:relative;width:190px;height:190px;flex:none;margin:0 auto}
+  .ring{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring-bg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:12}
+  .ring-fg{fill:none;stroke:url(#grad);stroke-width:12;stroke-linecap:round;stroke-dasharray:477.5;stroke-dashoffset:477.5;transition:stroke-dashoffset 1.4s cubic-bezier(.22,.9,.28,1)}
+  .ring-label{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+  .ring-label .score{font-family:var(--display);font-size:48px;line-height:1;font-weight:800}
+  .ring-label .score small{font-size:20px;color:var(--muted);font-weight:600}
+  .ring-label .pct{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+  .result-copy{flex:1;min-width:240px}
+  .result-copy .kicker{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:8px}
+  .result-copy h2{font-family:var(--display);font-size:clamp(28px,4.4vw,40px);line-height:1.02;text-transform:uppercase;letter-spacing:.02em;margin-bottom:10px}
+  .result-copy p{font-size:14px;color:var(--muted);max-width:440px}
+  .result-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+  .breakdown{margin-top:16px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:18px 26px}
+  .bd-row{display:flex;flex-direction:column;gap:7px}
+  .bd-head{display:flex;justify-content:space-between;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .bd-head b{color:var(--text);letter-spacing:.04em}
+  .bd-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bd-bar span{display:block;height:100%;border-radius:99px;width:0;transition:width 1s cubic-bezier(.22,.9,.28,1)}
+
+  .review{margin-top:16px;padding:26px}
+  .review h3{font-family:var(--display);font-size:19px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .review .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .rev-item{padding:14px 0;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:13px;align-items:flex-start}
+  .rev-icon{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:2px}
+  .rev-icon.ok{background:rgba(61,220,151,.16);color:var(--green);border:1px solid rgba(61,220,151,.35)}
+  .rev-icon.no{background:rgba(255,90,95,.14);color:var(--red);border:1px solid rgba(255,90,95,.35)}
+  .rev-body{flex:1;min-width:0}
+  .rev-q{font-size:13.5px;font-weight:600;margin-bottom:5px;line-height:1.45}
+  .rev-meta{font-size:12px;color:var(--muted);line-height:1.6}
+  .rev-meta .good{color:var(--green)}
+  .rev-meta .bad{color:#FF9A9D}
+
+  .foot{margin-top:auto;padding-top:34px;text-align:center;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.22)}
+
+  @media (max-width:720px){
+    .app{padding:18px 15px 40px}
+    .wordbank{grid-template-columns:1fr}
+    .q-card{padding:22px 18px 18px}
+    .breakdown{grid-template-columns:1fr;padding:20px}
+    .result-top{padding:24px 18px;gap:20px}
+    .setup{gap:12px;padding:16px 16px}
+    .setup .hint{display:none}
+    .counter{font-size:11px}
+    .option{font-size:13.5px;padding:13px 13px;gap:11px}
+    .feedback.show{gap:10px}
+    .btn-next{width:100%;justify-content:center}
+    .kbd-hint{display:none}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s!important;transition-duration:.001s!important}
+  }
+
+  @media print{
+    :root{--text:#111;--muted:#555;--line:#dcdcdc;--panel:#fff;--bg:#fff}
+    body{background:#fff;color:#111}
+    body::before,body::after{display:none}
+    .app{max-width:none;padding:0}
+    .topbar,.result-actions,.foot,.kbd-hint,.setup,.cta,.hero,.review .sub{display:none!important}
+    .card{box-shadow:none;border-color:#ddd;background:#fff;backdrop-filter:none}
+    .review,.breakdown,.result-top{page-break-inside:avoid}
+    .ring-bg{stroke:#e6e6e6}
+    .bd-bar{background:#eee}
+    .rev-item{border-top-color:#e5e5e5}
+    .rev-icon.ok{background:#e8faf1;border-color:#bfe9d4}
+    .rev-icon.no{background:#fdecec;border-color:#f6c9ca}
+    .kicker{color:#c2410c!important}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <b>Animal Battle Arena</b>
+        <span>Who wins?</span>
+      </span>
+    </div>
+    <div class="topbar-right">
+      <div class="pill" id="scorePill" hidden>Score <b id="scoreNow">0</b></div>
+      <div class="pill timer" id="timerPill" hidden><span class="dot" aria-hidden="true"></span><span id="timerText">0:30</span></div>
+      <div class="pill" id="totalPill">Interactive quiz</div>
+    </div>
+  </header>
+
+  <!-- ================= START ================= -->
+  <main class="screen active" id="screenStart">
+    <section class="hero">
+      <div class="eyebrow">Science &middot; Animal Adaptations</div>
+      <h1>The Animal Battle Arena<span class="accent">Who Wins?</span></h1>
+      <p class="lead">Survival is the ultimate game. Answer <b>15 questions</b> about body parts, habitats and the champions of each arena.</p>
+    </section>
+
+    <div class="stats">
+      <div class="stat"><b>15</b><span>Questions</span></div>
+      <div class="stat"><b>04</b><span>Arenas</span></div>
+      <div class="stat"><b>4</b><span>Choices each</span></div>
+      <div class="stat"><b>~6</b><span>Minutes</span></div>
+    </div>
+
+    <div class="arena-tags">
+      <span class="tag"><i style="background:#FF6B2C"></i>Desert Duel</span>
+      <span class="tag"><i style="background:#4EA8FF"></i>Ocean Face-Off</span>
+      <span class="tag"><i style="background:#3DDC97"></i>Wetland Showdown</span>
+      <span class="tag"><i style="background:#A78BFA"></i>Freshwater Challenge</span>
+    </div>
+
+    <div class="wordbank">
+      <div class="bank">
+        <h3>Body parts</h3>
+        <div class="words">
+          <span class="word">Claws</span><span class="word">Scales</span><span class="word">Flippers</span>
+          <span class="word">Beak</span><span class="word">Hump</span><span class="word">Whiskers</span>
+        </div>
+      </div>
+      <div class="bank">
+        <h3>Environments</h3>
+        <div class="words">
+          <span class="word">Desert</span><span class="word">Ocean</span><span class="word">Wetland</span><span class="word">Freshwater</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card setup">
+      <span class="label">Challenge timer</span>
+      <label class="switch">
+        <input type="checkbox" id="timerToggle">
+        <span class="track" aria-hidden="true"></span>
+        <span>30 seconds per question</span>
+      </label>
+      <span class="hint">Off by default &mdash; take your time.</span>
+    </div>
+
+    <div class="cta">
+      <button class="btn btn-primary" id="startBtn" type="button">Enter the arena <span aria-hidden="true">&rarr;</span></button>
+    </div>
+  </main>
+
+  <!-- ================= QUIZ ================= -->
+  <main class="screen" id="screenQuiz" aria-live="polite">
+    <div class="quiz-head">
+      <span class="chip" id="sectionChip">Gear Check</span>
+      <span class="counter">Question <b id="qCurrent">01</b> / <span id="qTotal">15</span></span>
+    </div>
+    <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+
+    <section class="card q-card" id="qCard">
+      <div class="q-num" id="qNum">Q.01</div>
+      <h2 class="q-text" id="qText">Question text</h2>
+      <div class="options" id="options" role="group" aria-labelledby="qText"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+    </section>
+
+    <div class="kbd-hint">
+      <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to choose</span>
+      <span><kbd>Enter</kbd> for the next question</span>
+    </div>
+  </main>
+
+  <!-- ================= RESULTS ================= -->
+  <main class="screen" id="screenResult">
+    <section class="card result-top">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 180 180" aria-hidden="true">
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#FF6B2C"/>
+              <stop offset="55%" stop-color="#FFA24B"/>
+              <stop offset="100%" stop-color="#2BD9E8"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="90" cy="90" r="76"/>
+          <circle class="ring-fg" id="ringFg" cx="90" cy="90" r="76"/>
+        </svg>
+        <div class="ring-label">
+          <div class="score"><span id="finalScore">0</span><small>/15</small></div>
+          <div class="pct" id="finalPct">0% correct</div>
+        </div>
+      </div>
+      <div class="result-copy">
+        <div class="kicker">Final bell</div>
+        <h2 id="rankTitle">Arena Champion</h2>
+        <p id="rankText"></p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="retryBtn" type="button">Play again</button>
+          <button class="btn btn-ghost" id="reviewBtn" type="button">Review answers</button>
+          <button class="btn btn-ghost" id="printBtn" type="button">Print / Save PDF</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card breakdown" id="breakdown"></section>
+
+    <section class="card review" id="review">
+      <h3>Answer review</h3>
+      <div class="sub" id="reviewSub">Every question, your answer and the correct one.</div>
+      <div id="reviewList"></div>
+    </section>
+  </main>
+
+  <footer class="foot">The Animal Battle Arena &middot; Survival is the ultimate game</footer>
+</div>
+
+<noscript>
+  <p style="padding:24px;text-align:center;color:#fff">This interactive quiz needs JavaScript enabled.</p>
+</noscript>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------------------------------------------------------
+     QUESTION BANK — every item comes straight from the presentation
+     answer = index inside the original options array
+  --------------------------------------------------------------- */
+  var QUESTIONS = [
+    {
+      section: "Gear Check",
+      q: "Which body part stores fat that an animal can burn for energy?",
+      options: ["The hump", "The beak", "The scales", "The flippers"],
+      answer: 0,
+      why: "The camel's hump stores fat for energy — a perfect tool for surviving a hot desert."
+    },
+    {
+      section: "Gear Check",
+      q: "A seal uses its whiskers to…",
+      options: ["sense moving fish", "crush food hidden in rocks", "block hot sand", "store fat for energy"],
+      answer: 0,
+      why: "Whiskers are sensors. In the ocean they pick up the movement of fish swimming nearby."
+    },
+    {
+      section: "Desert Duel",
+      q: "How does a camel walk across soft desert sand without sinking?",
+      options: ["Wide feet spread its weight", "Its hump balances the body", "Long eyelashes block the wind", "Furred paws grip the sand"],
+      answer: 0,
+      why: "Wide feet act like snowshoes: they spread the camel's weight so it stays on top of the soft sand."
+    },
+    {
+      section: "Desert Duel",
+      q: "The fennec fox's huge ears mainly help it…",
+      options: ["release body heat", "store fat for energy", "dig through hard rocks", "walk on soft sand"],
+      answer: 0,
+      why: "Big ears work like radiators. They release body heat and keep the fennec fox cool in the desert."
+    },
+    {
+      section: "Desert Duel",
+      q: "What protects the fennec fox's feet from the burning sand?",
+      options: ["Furred paws", "Wide webbed feet", "Armor scales", "Long claws"],
+      answer: 0,
+      why: "Fur on the paws blocks the hot sand, so the fox can run across the dunes without burning its feet."
+    },
+    {
+      section: "Ocean Face-Off",
+      q: "In the Ocean Face-Off, which animal competes against the seal?",
+      options: ["The hawksbill turtle", "The fennec fox", "The heron", "The river otter"],
+      answer: 0,
+      why: "The Ocean Face-Off pairs the hawksbill turtle (coral ocean) with the seal (deep ocean)."
+    },
+    {
+      section: "Ocean Face-Off",
+      q: "The hawksbill turtle's beak is built to…",
+      options: ["crush food hidden in rocks", "tear fish in murky water", "sense moving fish", "store fat for energy"],
+      answer: 0,
+      why: "Its strong beak crushes food that is hidden inside rocks on the coral reef."
+    },
+    {
+      section: "Ocean Face-Off",
+      q: "According to the presentation, a turtle's flippers act like…",
+      options: ["strong wings", "wide sandals", "sharp claws", "sensitive whiskers"],
+      answer: 0,
+      why: "The slide says the turtle's flippers act like strong wings, pushing it through the water."
+    },
+    {
+      section: "Ocean Face-Off",
+      q: "Both the turtle and the seal have flippers. Which sentence matches the presentation?",
+      options: [
+        "The seal's flippers help it swim fast",
+        "The turtle's flippers help it swim fast",
+        "The seal's flippers act like strong wings",
+        "The turtle's flippers store fat for energy"
+      ],
+      answer: 0,
+      why: "The presentation gives each animal a different job: the seal's flippers help it swim fast, while the turtle's flippers act like strong wings."
+    },
+    {
+      section: "Wetland Showdown",
+      q: "Which wetland bird uses a sensitive beak to find its food?",
+      options: ["The heron", "The bald eagle", "The river otter", "The alligator"],
+      answer: 0,
+      why: "The heron's sensitive beak feels for food — a great tool in dark, muddy water."
+    },
+    {
+      section: "Wetland Showdown",
+      q: "Which wetland bird is described with a sharp beak for tearing fish and strong talons?",
+      options: ["The bald eagle", "The heron", "The hawksbill turtle", "The fennec fox"],
+      answer: 0,
+      why: "The bald eagle uses a sharp beak to tear fish and strong claws (talons) to grab it."
+    },
+    {
+      section: "Wetland Showdown",
+      q: "Both wetland birds hunt fish. What makes the heron different?",
+      options: [
+        "It hunts in murky water and feels for food with a sensitive beak",
+        "It uses strong talons to grab its prey",
+        "It swims after fish with webbed feet",
+        "It crushes food hidden inside rocks"
+      ],
+      answer: 0,
+      why: "The eagle sees and grabs, but the heron hunts in murky water where it cannot see — so it relies on a sensitive beak instead."
+    },
+    {
+      section: "Freshwater Challenge",
+      q: "What covers the alligator's back and works like armor?",
+      options: ["Scales", "Fur", "Feathers", "A thick layer of fat"],
+      answer: 0,
+      why: "Armor scales cover the alligator's back, protecting it in freshwater."
+    },
+    {
+      section: "Freshwater Challenge",
+      q: "Which animal has webbed feet, claws, and whiskers that feel in the mud?",
+      options: ["The river otter", "The alligator", "The seal", "The heron"],
+      answer: 0,
+      why: "Webbed feet and claws push through the water, and whiskers feel for food in the mud — the river otter's freshwater kit."
+    },
+    {
+      section: "Final Bell",
+      q: "What is the main message of the presentation?",
+      options: [
+        "The habitat picks the champion — there is no universal winner",
+        "The biggest animal always wins",
+        "Desert animals are the strongest of all",
+        "Every animal can survive in every habitat"
+      ],
+      answer: 0,
+      why: "Every body part has a perfect home. There is no universal winner — only the best fit for the desert, ocean, wetland or freshwater."
+    }
+  ];
+
+  var SECTION_COLORS = {
+    "Gear Check": "#2BD9E8",
+    "Desert Duel": "#FF6B2C",
+    "Ocean Face-Off": "#4EA8FF",
+    "Wetland Showdown": "#3DDC97",
+    "Freshwater Challenge": "#A78BFA",
+    "Final Bell": "#FFC145"
+  };
+
+  var RANKS = [
+    { min: 15, title: "Arena Champion", text: "Perfect score. Every body part, every habitat and every champion — you know them all." },
+    { min: 12, title: "Top Predator", text: "Excellent work. You understand how animals are built for their habitats." },
+    { min: 9,  title: "Strong Competitor", text: "A solid result. Review the questions you missed and you will be arena-ready." },
+    { min: 5,  title: "Still Adapting", text: "Good start. Look again at the four duels and the body parts that win each one." },
+    { min: 0,  title: "Back to the Habitat", text: "No worries — champions are made with practice. Review the answers and try again." }
+  ];
+
+  /* ---------------- state ---------------- */
+  var state = {
+    index: 0,
+    runtime: [],
+    answers: [],
+    timerOn: false,
+    timeLeft: 30,
+    timerId: null,
+    locked: false,
+    startedAt: 0
+  };
+
+  /* ---------------- elements ---------------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var screens = {
+    start: $("screenStart"),
+    quiz: $("screenQuiz"),
+    result: $("screenResult")
+  };
+  var el = {
+    startBtn: $("startBtn"),
+    retryBtn: $("retryBtn"),
+    reviewBtn: $("reviewBtn"),
+    printBtn: $("printBtn"),
+    timerToggle: $("timerToggle"),
+    timerPill: $("timerPill"),
+    timerText: $("timerText"),
+    scorePill: $("scorePill"),
+    scoreNow: $("scoreNow"),
+    totalPill: $("totalPill"),
+    sectionChip: $("sectionChip"),
+    qCurrent: $("qCurrent"),
+    qTotal: $("qTotal"),
+    qNum: $("qNum"),
+    qText: $("qText"),
+    options: $("options"),
+    feedback: $("feedback"),
+    progressFill: $("progressFill"),
+    qCard: $("qCard"),
+    finalScore: $("finalScore"),
+    finalPct: $("finalPct"),
+    rankTitle: $("rankTitle"),
+    rankText: $("rankText"),
+    ringFg: $("ringFg"),
+    breakdown: $("breakdown"),
+    reviewList: $("reviewList"),
+    review: $("review")
+  };
+
+  /* ---------------- helpers ---------------- */
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function buildRuntime() {
+    return QUESTIONS.map(function (q) {
+      var order = q.options.map(function (_, k) { return k; });
+      shuffle(order);
+      return {
+        options: order.map(function (k) { return q.options[k]; }),
+        correct: order.indexOf(q.answer)
+      };
+    });
+  }
+
+  function showScreen(name) {
+    Object.keys(screens).forEach(function (k) {
+      screens[k].classList.toggle("active", k === name);
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  function currentScore() {
+    return state.answers.reduce(function (acc, a) {
+      return acc + (a && a.correct ? 1 : 0);
+    }, 0);
+  }
+
+  /* ---------------- timer ---------------- */
+  function stopTimer() {
+    if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
+  }
+
+  function renderTimer() {
+    if (!state.timerOn) return;
+    el.timerText.textContent = "0:" + pad(Math.max(0, state.timeLeft));
+    el.timerPill.classList.toggle("low", state.timeLeft <= 8);
+  }
+
+  function startTimer() {
+    stopTimer();
+    el.timerPill.classList.remove("low");
+    if (!state.timerOn) { el.timerPill.hidden = true; return; }
+    el.timerPill.hidden = false;
+    state.timeLeft = 30;
+    renderTimer();
+    state.timerId = setInterval(function () {
+      state.timeLeft -= 1;
+      renderTimer();
+      if (state.timeLeft <= 0) {
+        stopTimer();
+        answer(-1);
+      }
+    }, 1000);
+  }
+
+  /* ---------------- quiz flow ---------------- */
+  function renderQuestion() {
+    var q = QUESTIONS[state.index];
+    var rt = state.runtime[state.index];
+    state.locked = false;
+
+    el.sectionChip.textContent = q.section;
+    el.sectionChip.style.setProperty("--accent", SECTION_COLORS[q.section] || "#FF6B2C");
+    el.qCard.style.setProperty("--accent", SECTION_COLORS[q.section] || "#FF6B2C");
+
+    el.qCurrent.textContent = pad(state.index + 1);
+    el.qTotal.textContent = QUESTIONS.length;
+    el.qNum.textContent = "Q." + pad(state.index + 1);
+    el.qText.textContent = q.q;
+
+    el.options.innerHTML = rt.options.map(function (opt, i) {
+      return '<button class="option" type="button" data-idx="' + i + '">' +
+        '<span class="letter" aria-hidden="true">' + "ABCD"[i] + "</span>" +
+        '<span class="opt-text">' + opt + "</span>" +
+        '<span class="opt-mark" aria-hidden="true"></span>' +
+        "</button>";
+    }).join("");
+
+    Array.prototype.forEach.call(el.options.children, function (btn) {
+      btn.addEventListener("click", function () { answer(Number(btn.dataset.idx)); });
+    });
+
+    el.feedback.className = "feedback";
+    el.feedback.innerHTML = "";
+    el.progressFill.style.width = (state.index / QUESTIONS.length) * 100 + "%";
+    el.scoreNow.textContent = currentScore();
+
+    startTimer();
+
+    var first = el.options.querySelector(".option");
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function answer(choice) {
+    if (state.locked) return;
+    state.locked = true;
+    stopTimer();
+
+    var rt = state.runtime[state.index];
+    var q = QUESTIONS[state.index];
+    var correct = choice === rt.correct;
+
+    state.answers[state.index] = { choice: choice, correct: correct };
+
+    var btns = el.options.querySelectorAll(".option");
+    Array.prototype.forEach.call(btns, function (btn, i) {
+      btn.disabled = true;
+      if (i === rt.correct) {
+        btn.classList.add("correct");
+        btn.querySelector(".opt-mark").textContent = "\u2713";
+      } else if (i === choice) {
+        btn.classList.add("wrong");
+        btn.querySelector(".opt-mark").textContent = "\u2715";
+      } else {
+        btn.classList.add("dim");
+      }
+    });
+
+    var title = correct ? "Correct!" : (choice === -1 ? "Time is up" : "Not quite");
+    var body = correct
+      ? q.why
+      : '<span class="ans">Correct answer: ' + rt.options[rt.correct] + ".</span> " + q.why;
+
+    el.feedback.className = "feedback show " + (correct ? "ok" : "no");
+    el.feedback.innerHTML =
+      '<div class="fb-body">' +
+        '<div class="fb-title"><span aria-hidden="true">' + (correct ? "\u2713" : "\u2715") + "</span>" + title + "</div>" +
+        '<div class="fb-text">' + body + "</div>" +
+      "</div>" +
+      '<button class="btn btn-next" type="button" id="nextBtn">' +
+        (state.index === QUESTIONS.length - 1 ? "See results" : "Next question") +
+        ' <span aria-hidden="true">&rarr;</span></button>';
+
+    $("nextBtn").addEventListener("click", next);
+    $("nextBtn").focus({ preventScroll: true });
+
+    el.scoreNow.textContent = currentScore();
+    el.progressFill.style.width = ((state.index + 1) / QUESTIONS.length) * 100 + "%";
+  }
+
+  function next() {
+    if (!state.locked) return;
+    if (state.index < QUESTIONS.length - 1) {
+      state.index += 1;
+      renderQuestion();
+    } else {
+      finish();
+    }
+  }
+
+  /* ---------------- results ---------------- */
+  function finish() {
+    stopTimer();
+    el.timerPill.hidden = true;
+    el.scorePill.hidden = true;
+
+    var score = currentScore();
+    var total = QUESTIONS.length;
+    var pct = Math.round((score / total) * 100);
+    var rank = RANKS.filter(function (r) { return score >= r.min; })[0];
+
+    el.finalScore.textContent = score;
+    el.finalPct.textContent = pct + "% correct";
+    el.rankTitle.textContent = rank.title;
+    el.rankText.textContent = rank.text;
+
+    el.ringFg.style.strokeDashoffset = 477.5;
+    setTimeout(function () {
+      el.ringFg.style.strokeDashoffset = 477.5 * (1 - score / total);
+    }, 120);
+
+    renderBreakdown();
+    renderReview();
+    showScreen("result");
+  }
+
+  function renderBreakdown() {
+    var sections = [];
+    QUESTIONS.forEach(function (q, i) {
+      var s = sections.filter(function (x) { return x.name === q.section; })[0];
+      if (!s) { s = { name: q.section, total: 0, correct: 0 }; sections.push(s); }
+      s.total += 1;
+      if (state.answers[i] && state.answers[i].correct) s.correct += 1;
+    });
+
+    el.breakdown.innerHTML = sections.map(function (s) {
+      var pct = Math.round((s.correct / s.total) * 100);
+      var color = SECTION_COLORS[s.name] || "#FF6B2C";
+      return '<div class="bd-row">' +
+        '<div class="bd-head"><span>' + s.name + "</span><b>" + s.correct + " / " + s.total + "</b></div>" +
+        '<div class="bd-bar"><span data-w="' + pct + '" style="background:' + color + '"></span></div>' +
+        "</div>";
+    }).join("");
+
+    requestAnimationFrame(function () {
+      Array.prototype.forEach.call(el.breakdown.querySelectorAll(".bd-bar span"), function (bar) {
+        bar.style.width = bar.dataset.w + "%";
+      });
+    });
+  }
+
+  function renderReview() {
+    el.reviewList.innerHTML = QUESTIONS.map(function (q, i) {
+      var a = state.answers[i];
+      var rt = state.runtime[i];
+      var ok = a && a.correct;
+      var yours = a && a.choice >= 0 ? rt.options[a.choice] : "No answer (time ran out)";
+      var correctText = rt.options[rt.correct];
+
+      return '<div class="rev-item">' +
+        '<div class="rev-icon ' + (ok ? "ok" : "no") + '" aria-hidden="true">' + (ok ? "\u2713" : "\u2715") + "</div>" +
+        '<div class="rev-body">' +
+          '<div class="rev-q">' + (i + 1) + ". " + q.q + "</div>" +
+          '<div class="rev-meta">Your answer: <span class="' + (ok ? "good" : "bad") + '">' + yours + "</span><br>" +
+          "Correct answer: <span class=\"good\">" + correctText + "</span>" +
+          (ok ? "" : "<br>" + q.why) +
+          "</div>" +
+        "</div>" +
+      "</div>";
+    }).join("");
+  }
+
+  /* ---------------- events ---------------- */
+  function startQuiz() {
+    state.index = 0;
+    state.answers = [];
+    state.runtime = buildRuntime();
+    state.timerOn = el.timerToggle.checked;
+    state.startedAt = Date.now();
+
+    el.scorePill.hidden = false;
+    el.scoreNow.textContent = "0";
+    el.totalPill.textContent = QUESTIONS.length + " questions";
+
+    showScreen("quiz");
+    renderQuestion();
+  }
+
+  el.startBtn.addEventListener("click", startQuiz);
+
+  el.retryBtn.addEventListener("click", function () {
+    showScreen("start");
+    el.timerPill.hidden = true;
+    el.scorePill.hidden = true;
+    el.totalPill.textContent = QUESTIONS.length + " questions";
+    stopTimer();
+  });
+
+  el.reviewBtn.addEventListener("click", function () {
+    el.review.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  el.printBtn.addEventListener("click", function () { window.print(); });
+
+  document.addEventListener("keydown", function (e) {
+    if (!screens.quiz.classList.contains("active")) return;
+
+    if (!state.locked) {
+      var key = e.key.toUpperCase();
+      var map = { "1": 0, "2": 1, "3": 2, "4": 3, "A": 0, "B": 1, "C": 2, "D": 3 };
+      if (map.hasOwnProperty(key)) {
+        e.preventDefault();
+        var btn = el.options.children[map[key]];
+        if (btn) btn.click();
+      }
+    } else if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") {
+      e.preventDefault();
+      next();
+    }
+  });
+
+  el.qTotal.textContent = QUESTIONS.length;
+})();
+</script>
+</body>
+</html>
